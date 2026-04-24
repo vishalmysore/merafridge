@@ -2,7 +2,7 @@
 
 GrocBot is a WebXR-powered application built with **Vite** and **Three.js**. It helps you visualize if your groceries will fit in your fridge using Augmented Reality.
 
-![AR View](grocbot_ar_view_1777032642794.png)
+![AR View](MeraFridge1.png)
 
 ## 🛠 Tech Stack
 - **Engine**: Three.js
