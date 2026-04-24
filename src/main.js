@@ -1,74 +1,94 @@
 import './style.css';
 import * as THREE from 'three';
-import { ARButton } from 'three/examples/jsm/webxr/ARButton.js';
+import { XRManager } from './XRManager.js';
 
-class GrocBot {
+class GrocBotApp {
     constructor() {
-        this.container = document.getElementById('three-canvas');
+        this.container = document.getElementById('app');
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
-        
-        this.renderer = new THREE.WebGLRenderer({
-            canvas: this.container,
-            antialias: true,
-            alpha: true
-        });
+        this.camera.position.set(0, 1.6, 0);
+
+        this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         this.renderer.setPixelRatio(window.devicePixelRatio);
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.xr.enabled = true;
+        this.renderer.xr.enabled = false;
+        this.container.appendChild(this.renderer.domElement);
 
-        this.hitTestSource = null;
-        this.hitTestSourceRequested = false;
-        this.reticle = null;
-        this.placementMode = true;
-
+        this.xrManager = new XRManager(this.renderer, this.scene, this.camera);
+        
         this.light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 2);
         this.light.position.set(0.5, 1, 0.25);
         this.scene.add(this.light);
 
-        // Core State
         this.fridge = null;
         this.items = [];
         this.fridgeDimensions = { w: 60, h: 120, d: 50 };
         this.shelvesCount = 4;
+        this.isARActive = false;
 
-        this.initUI();
-        this.setupXR();
-        
-        // Immediately Create Fridge
-        this.createFridge();
-        this.animate();
-
-        window.addEventListener('resize', () => this.onWindowResize());
+        this.init();
     }
 
-    initUI() {
-        // Step buttons (+/-)
-        document.querySelectorAll('.step-btn').forEach(btn => {
-            btn.onclick = () => {
-                const dim = btn.dataset.dim;
-                const val = parseInt(btn.dataset.val);
-                this.updateDimension(dim, val);
-            };
-        });
-
-        // Add Item buttons
-        document.querySelectorAll('.add-item-btn').forEach(btn => {
-            btn.onclick = () => this.addItem(btn.dataset.type);
-        });
-
-        // Load saved state
+    async init() {
+        this.setupUI();
+        this.createFridge();
+        
+        this.renderer.setAnimationLoop((time, frame) => this.animate(time, frame));
+        window.addEventListener('resize', () => this.onResize());
+        
+        // Load settings
         const saved = localStorage.getItem('grocbot_fridge');
         if (saved) {
             this.fridgeDimensions = JSON.parse(saved);
             this.syncUI();
+            this.createFridge();
+        }
+    }
+
+    setupUI() {
+        const arButton = document.getElementById('ar-button');
+        arButton.onclick = () => this.toggleAR();
+
+        document.querySelectorAll('.step-btn').forEach(btn => {
+            btn.onclick = () => this.updateDimension(btn.dataset.dim, parseInt(btn.dataset.val));
+        });
+
+        document.querySelectorAll('.add-item-btn').forEach(btn => {
+            btn.onclick = () => this.addItem(btn.dataset.type);
+        });
+    }
+
+    async toggleAR() {
+        const arButton = document.getElementById('ar-button');
+        const controls = document.getElementById('controls');
+        const uiContainer = document.getElementById('ui-container');
+
+        if (!this.isARActive) {
+            try {
+                arButton.textContent = 'Starting...';
+                await this.xrManager.startARSession(uiContainer);
+                this.isARActive = true;
+                arButton.textContent = 'EXIT AR';
+                controls.style.display = 'block';
+                this.showMessage('Find a floor and tap to place fridge');
+            } catch (err) {
+                console.error(err);
+                alert('AR not supported or permission denied');
+                arButton.textContent = 'ENTER AR';
+            }
+        } else {
+            await this.xrManager.endARSession();
+            this.isARActive = false;
+            arButton.textContent = 'ENTER AR';
+            controls.style.display = 'none';
         }
     }
 
     updateDimension(dim, delta) {
         this.fridgeDimensions[dim] = Math.max(10, this.fridgeDimensions[dim] + delta);
         this.syncUI();
-        this.createFridge(); // Rebuild fridge with new size
+        this.createFridge();
         localStorage.setItem('grocbot_fridge', JSON.stringify(this.fridgeDimensions));
     }
 
@@ -78,230 +98,106 @@ class GrocBot {
         document.getElementById('val-d').textContent = this.fridgeDimensions.d;
     }
 
-    setupXR() {
-        const arButton = ARButton.createButton(this.renderer, {
-            requiredFeatures: ['hit-test'],
-            optionalFeatures: ['dom-overlay'],
-            domOverlay: { root: document.getElementById('ui-container') }
-        });
-        
-        if (arButton) {
-            document.getElementById('xr-button-container').appendChild(arButton);
-        }
-    }
-
     createFridge() {
-        // Keep items if we are just resizing
-        const existingItems = this.items.map(i => ({ type: i.type, pos: i.mesh.position.clone() }));
-        
-        if (this.fridge) {
-            this.scene.remove(this.fridge);
-        }
-
+        if (this.fridge) this.scene.remove(this.fridge);
         const { w, h, d } = this.fridgeDimensions;
         const group = new THREE.Group();
-
-        const mw = w / 100;
-        const mh = h / 100;
-        const md = d / 100;
-
+        const mw = w / 100, mh = h / 100, md = d / 100;
         const wallMat = new THREE.MeshStandardMaterial({ 
-            color: 0x222222, 
-            side: THREE.DoubleSide,
-            transparent: true,
-            opacity: 0.4,
-            roughness: 0.1,
-            metalness: 0.5
+            color: 0x222222, side: THREE.DoubleSide, transparent: true, opacity: 0.4 
         });
 
-        // Main shell
-        const backWall = new THREE.Mesh(new THREE.PlaneGeometry(mw, mh), wallMat);
-        backWall.position.z = -md / 2;
-        group.add(backWall);
+        const back = new THREE.Mesh(new THREE.PlaneGeometry(mw, mh), wallMat);
+        back.position.z = -md/2;
+        group.add(back);
 
-        const floor = new THREE.Mesh(new THREE.PlaneGeometry(mw, md), wallMat);
-        floor.rotation.x = Math.PI / 2;
-        floor.position.y = -mh / 2;
-        group.add(floor);
+        const bottom = new THREE.Mesh(new THREE.PlaneGeometry(mw, md), wallMat);
+        bottom.rotation.x = Math.PI/2;
+        bottom.position.y = -mh/2;
+        group.add(bottom);
 
-        const sideGeom = new THREE.PlaneGeometry(md, mh);
-        const leftWall = new THREE.Mesh(sideGeom, wallMat);
-        leftWall.rotation.y = Math.PI / 2;
-        leftWall.position.x = -mw / 2;
-        group.add(leftWall);
+        const sideG = new THREE.PlaneGeometry(md, mh);
+        const left = new THREE.Mesh(sideG, wallMat);
+        left.rotation.y = Math.PI/2; left.position.x = -mw/2;
+        group.add(left);
+        const right = new THREE.Mesh(sideG, wallMat);
+        right.rotation.y = -Math.PI/2; right.position.x = mw/2;
+        group.add(right);
 
-        const rightWall = new THREE.Mesh(sideGeom, wallMat);
-        rightWall.rotation.y = -Math.PI / 2;
-        rightWall.position.x = mw / 2;
-        group.add(rightWall);
-
-        // Shelves with a "glass" look
-        const shelfMat = new THREE.MeshStandardMaterial({ 
-            color: 0x88ccff, 
-            transparent: true, 
-            opacity: 0.3,
-            roughness: 0,
-            metalness: 1
-        });
-
-        const shelfSpacing = mh / this.shelvesCount;
+        const shelfMat = new THREE.MeshStandardMaterial({ color: 0x88ccff, transparent: true, opacity: 0.3 });
         for (let i = 1; i < this.shelvesCount; i++) {
-            const shelf = new THREE.Mesh(new THREE.PlaneGeometry(mw, md), shelfMat);
-            shelf.rotation.x = Math.PI / 2;
-            shelf.position.y = -mh / 2 + (i * shelfSpacing);
-            group.add(shelf);
+            const s = new THREE.Mesh(new THREE.PlaneGeometry(mw, md), shelfMat);
+            s.rotation.x = Math.PI/2;
+            s.position.y = -mh/2 + (i * (mh/this.shelvesCount));
+            group.add(s);
         }
 
-        // Reticle (Always needed for placement)
-        if (!this.reticle) {
-            const reticleGeom = new THREE.RingGeometry(0.1, 0.12, 32);
-            reticleGeom.rotateX(-Math.PI / 2);
-            this.reticle = new THREE.Mesh(reticleGeom, new THREE.MeshBasicMaterial({ color: 0xcdec4b }));
-            this.reticle.matrixAutoUpdate = false;
-            this.reticle.visible = false;
-            this.scene.add(this.reticle);
-        }
-
-        group.position.set(0, -0.5, -1.2);
+        group.position.set(0, 0, -1.5);
         this.scene.add(group);
         this.fridge = group;
-
-        // Restore items with updated logic if needed, or clear for simplicity on resize
         this.items = [];
-        this.updateUI();
+        this.updateStats();
     }
 
     addItem(type) {
         if (!this.fridge) return;
-
-        const itemData = this.getItemSpecs(type);
-        const mw = itemData.w / 100;
-        const mh = itemData.h / 100;
-        const md = itemData.d / 100;
-
-        const geometry = new THREE.BoxGeometry(mw, mh, md);
-        const material = new THREE.MeshStandardMaterial({ 
-            color: itemData.color,
-            roughness: 0.3,
-            metalness: 0.2
-        });
-        const mesh = new THREE.Mesh(geometry, material);
-
-        // Auto-placement logic
-        const shelfIndex = Math.floor(Math.random() * this.shelvesCount);
-        const shelfSpacing = (this.fridgeDimensions.h / 100) / this.shelvesCount;
-        const yPos = -(this.fridgeDimensions.h/100)/2 + (shelfIndex * shelfSpacing) + (mh/2);
-        
-        const xLimit = (this.fridgeDimensions.w / 100) / 2 - (mw / 2);
-        const zLimit = (this.fridgeDimensions.d / 100) / 2 - (md / 2);
-        
-        mesh.position.set((Math.random() - 0.5) * xLimit * 2, yPos, (Math.random() - 0.5) * zLimit * 2);
-
+        const s = this.getItemSpecs(type);
+        const mesh = new THREE.Mesh(
+            new THREE.BoxGeometry(s.w/100, s.h/100, s.d/100),
+            new THREE.MeshStandardMaterial({ color: s.color })
+        );
+        const shelfIdx = Math.floor(Math.random() * this.shelvesCount);
+        const y = -(this.fridgeDimensions.h/200) + (shelfIdx * (this.fridgeDimensions.h/100/this.shelvesCount)) + (s.h/200);
+        mesh.position.set((Math.random()-0.5)*0.2, y, (Math.random()-0.5)*0.2);
         this.fridge.add(mesh);
         this.items.push({ type, mesh, id: Date.now() });
-        this.updateUI();
+        this.updateStats();
     }
 
     getItemSpecs(type) {
         const specs = {
-            milk:   { w: 7,  h: 22, d: 7,  color: 0xffffff, icon: '🥛', name: 'Milk' },
-            eggs:   { w: 24, h: 7,  d: 11, color: 0xF5DEB3, icon: '🥚', name: 'Eggs' },
+            milk: { w: 7, h: 22, d: 7, color: 0xffffff, icon: '🥛', name: 'Milk' },
+            eggs: { w: 24, h: 7, d: 11, color: 0xF5DEB3, icon: '🥚', name: 'Eggs' },
             yogurt: { w: 10, h: 10, d: 10, color: 0xffe4e1, icon: '🍦', name: 'Yogurt' },
-            soda:   { w: 6,  h: 23, d: 6,  color: 0x22c55e, icon: '🍾', name: 'Soda' },
-            box:    { w: 15, h: 8,  d: 15, color: 0x8b4513, icon: '📦', name: 'Leftovers' }
+            soda: { w: 6, h: 23, d: 6, color: 0x22c55e, icon: '🍾', name: 'Soda' },
+            box: { w: 15, h: 8, d: 15, color: 0x8b4513, icon: '📦', name: 'Box' }
         };
-        return specs[type] || specs.box;
+        return specs[type];
     }
 
-    updateUI() {
-        const list = document.getElementById('current-items');
-        list.innerHTML = '';
-        
-        this.items.forEach(item => {
-            const specs = this.getItemSpecs(item.type);
-            const card = document.createElement('div');
-            card.className = 'grocery-card';
-            card.innerHTML = `
-                <span>${specs.icon}</span>
-                <span class="card-name">${specs.name}</span>
-                <button class="remove-btn">✕</button>
-            `;
-            card.querySelector('.remove-btn').onclick = () => this.destroyItem(item.id);
-            list.appendChild(card);
-        });
-
-        const fridgeVol = this.fridgeDimensions.w * this.fridgeDimensions.h * this.fridgeDimensions.d;
-        let itemsVol = 0;
-        this.items.forEach(item => {
-            const s = this.getItemSpecs(item.type);
-            itemsVol += (s.w * s.h * s.d);
-        });
-
-        const percent = Math.min(Math.round((itemsVol / fridgeVol) * 100), 100);
-        document.getElementById('occupancy-fill').style.width = percent + '%';
-        document.getElementById('occupancy-text').textContent = percent + '% FULL';
-        
-        // Dynamic color for full logic
-        const color = percent > 90 ? '#ef4444' : (percent > 70 ? '#facc15' : '#cdec4b');
-        document.getElementById('occupancy-fill').style.background = color;
+    updateStats() {
+        const vol = this.fridgeDimensions.w * this.fridgeDimensions.h * this.fridgeDimensions.d;
+        let iv = 0;
+        this.items.forEach(i => { const s = this.getItemSpecs(i.type); iv += (s.w*s.h*s.d); });
+        const p = Math.min(Math.round((iv/vol)*100), 100);
+        document.getElementById('occupancy-fill').style.width = p + '%';
+        document.getElementById('occupancy-text').textContent = p + '% FULL';
     }
 
-    destroyItem(id) {
-        const index = this.items.findIndex(i => i.id === id);
-        if (index > -1) {
-            this.fridge.remove(this.items[index].mesh);
-            this.items.splice(index, 1);
-            this.updateUI();
+    showMessage(txt) {
+        const m = document.getElementById('app-message');
+        m.textContent = txt; m.classList.remove('hidden');
+        setTimeout(() => m.classList.add('hidden'), 3000);
+    }
+
+    animate(time, frame) {
+        if (this.isARActive && frame) {
+            const pose = this.xrManager.updateHitTest(frame);
+            if (pose && this.fridge) {
+                this.fridge.position.setFromMatrixPosition(this.xrManager.reticle.matrix);
+                this.fridge.position.y += (this.fridgeDimensions.h / 200); // Sit on surface
+            }
+        } else if (!this.isARActive) {
+            if (this.fridge) this.fridge.rotation.y += 0.01;
         }
+        this.renderer.render(this.scene, this.camera);
     }
 
-    onWindowResize() {
+    onResize() {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
     }
-
-    animate() {
-        this.renderer.setAnimationLoop((time, frame) => {
-            if (frame) {
-                const referenceSpace = this.renderer.xr.getReferenceSpace();
-                const session = this.renderer.xr.getSession();
-
-                if (this.hitTestSourceRequested === false) {
-                    session.requestReferenceSpace('viewer').then((referenceSpace) => {
-                        session.requestHitTestSource({ space: referenceSpace }).then((source) => {
-                            this.hitTestSource = source;
-                        });
-                    });
-                    session.addEventListener('end', () => {
-                        this.hitTestSourceRequested = false;
-                        this.hitTestSource = null;
-                        this.reticle.visible = false;
-                    });
-                    this.hitTestSourceRequested = true;
-                }
-
-                if (this.hitTestSource) {
-                    const hitTestResults = frame.getHitTestResults(this.hitTestSource);
-                    if (hitTestResults.length) {
-                        const hit = hitTestResults[0];
-                        this.reticle.visible = true;
-                        this.reticle.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
-                        if (this.placementMode && this.fridge) {
-                            this.fridge.position.setFromMatrixPosition(this.reticle.matrix);
-                            this.fridge.position.y += 0.5; // Offset to sit on floor
-                        }
-                    } else {
-                        this.reticle.visible = false;
-                    }
-                }
-            } else {
-                // Desktop rotation for preview
-                if (this.fridge) this.fridge.rotation.y += 0.005;
-            }
-            this.renderer.render(this.scene, this.camera);
-        });
-    }
 }
 
-new GrocBot();
+window.onload = () => new GrocBotApp();

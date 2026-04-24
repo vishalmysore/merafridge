@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>GrocBot | Grocery Space Preview</title>
     <meta name="description" content="Check if your groceries fit in your fridge with WebXR AR.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,76 +11,79 @@
     <link rel="stylesheet" href="/src/style.css">
 </head>
 <body>
-    <div id="app">
-        <div id="ui-container">
-            <header>
-                <div class="logo">
-                    <span class="icon">🥗</span>
-                    <h1>GrocBot</h1>
+    <div id="app"></div>
+
+    <!-- UI Overlay -->
+    <div id="ui-container">
+        <header>
+            <div class="logo">
+                <h1>GrocBot 🥗</h1>
+            </div>
+            <div id="xr-status">WebXR Ready</div>
+        </header>
+
+        <!-- AR Dashboard (Hidden until AR starts) -->
+        <main id="main-ui">
+            <section id="controls" class="glass-panel" style="display: none;">
+                <div class="dimension-controls">
+                    <div class="dim-group">
+                        <label>W</label>
+                        <div class="stepper">
+                            <button class="step-btn" data-dim="w" data-val="-5">-</button>
+                            <span id="val-w">60</span>
+                            <button class="step-btn" data-dim="w" data-val="5">+</button>
+                        </div>
+                    </div>
+                    <div class="dim-group">
+                        <label>H</label>
+                        <div class="stepper">
+                            <button class="step-btn" data-dim="h" data-val="-10">-</button>
+                            <span id="val-h">120</span>
+                            <button class="step-btn" data-dim="h" data-val="10">+</button>
+                        </div>
+                    </div>
+                    <div class="dim-group">
+                        <label>D</label>
+                        <div class="stepper">
+                            <button class="step-btn" data-dim="d" data-val="-5">-</button>
+                            <span id="val-d">50</span>
+                            <button class="step-btn" data-dim="d" data-val="5">+</button>
+                        </div>
+                    </div>
                 </div>
-                <div id="ar-status">Ready</div>
-            </header>
 
-            <main id="main-ui">
-                <!-- AR Dashboard -->
-                <section id="controls" class="glass-panel">
-                    <div class="dimension-controls">
-                        <div class="dim-group">
-                            <label>Width</label>
-                            <div class="stepper">
-                                <button class="step-btn" data-dim="w" data-val="-5">-</button>
-                                <span id="val-w">60</span>
-                                <button class="step-btn" data-dim="w" data-val="5">+</button>
-                            </div>
-                        </div>
-                        <div class="dim-group">
-                            <label>Height</label>
-                            <div class="stepper">
-                                <button class="step-btn" data-dim="h" data-val="-10">-</button>
-                                <span id="val-h">120</span>
-                                <button class="step-btn" data-dim="h" data-val="10">+</button>
-                            </div>
-                        </div>
-                        <div class="dim-group">
-                            <label>Depth</label>
-                            <div class="stepper">
-                                <button class="step-btn" data-dim="d" data-val="-5">-</button>
-                                <span id="val-d">50</span>
-                                <button class="step-btn" data-dim="d" data-val="5">+</button>
-                            </div>
-                        </div>
+                <div id="fridge-stats">
+                    <div class="progress-container">
+                        <div id="occupancy-fill" style="width: 0%"></div>
+                        <span id="occupancy-text">0% FULL</span>
                     </div>
-
-                    <div id="fridge-stats">
-                        <div class="progress-container">
-                            <div id="occupancy-fill" style="width: 0%"></div>
-                            <span id="occupancy-text">0% FULL</span>
-                        </div>
+                </div>
+                
+                <div id="grocery-list">
+                    <div class="item-grid">
+                        <button class="add-item-btn" data-type="milk">🥛<span>Milk</span></button>
+                        <button class="add-item-btn" data-type="eggs">🥚<span>Eggs</span></button>
+                        <button class="add-item-btn" data-type="yogurt">🍦<span>Yogurt</span></button>
+                        <button class="add-item-btn" data-type="soda">🍾<span>Soda</span></button>
+                        <button class="add-item-btn" data-type="box">📦<span>Box</span></button>
                     </div>
-                    
-                    <div id="grocery-list">
-                        <div class="item-grid">
-                            <button class="add-item-btn" data-type="milk">🥛<span>Milk</span></button>
-                            <button class="add-item-btn" data-type="eggs">🥚<span>Eggs</span></button>
-                            <button class="add-item-btn" data-type="yogurt">🍦<span>Yogurt</span></button>
-                            <button class="add-item-btn" data-type="soda">🍾<span>Soda</span></button>
-                            <button class="add-item-btn" data-type="box">📦<span>Box</span></button>
-                        </div>
-                    </div>
+                </div>
+                <div id="current-items"></div>
+            </section>
+        </main>
 
-                    <div id="current-items"></div>
-                </section>
-            </main>
-
-            <footer>
-                <div id="xr-button-container"></div>
-            </footer>
-        </div>
-
-        <canvas id="three-canvas"></canvas>
-
-        <div id="modal-overlay" class="hidden">
+        <footer>
+            <button id="ar-button" class="primary-btn">
+                <span>🥽</span> ENTER AR
+            </button>
+        </footer>
     </div>
+
+    <!-- Message Overlay -->
+    <div id="app-message" class="hidden"></div>
+
+    <canvas id="three-canvas" style="display: none;"></canvas>
+    
     <script type="module" src="/src/main.js"></script>
 </body>
 </html>
