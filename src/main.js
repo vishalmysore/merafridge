@@ -67,7 +67,7 @@ class GrocBotApp {
         if (!this.isARActive) {
             try {
                 arButton.textContent = 'Starting...';
-                await this.xrManager.startARSession(uiContainer);
+                await this.xrManager.startARSession();
                 this.isARActive = true;
                 arButton.textContent = 'EXIT AR';
                 controls.style.display = 'block';

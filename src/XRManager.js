@@ -52,15 +52,15 @@ export class XRManager {
         this.reticle.add(dot);
     }
 
-    async startARSession(overlayElement) {
+    async startARSession() {
         if (!this.isSupported) {
             throw new Error('WebXR AR not supported');
         }
 
         const sessionInit = {
             requiredFeatures: ['hit-test'],
-            optionalFeatures: ['dom-overlay'],
-            domOverlay: { root: overlayElement }
+            optionalFeatures: ['dom-overlay', 'local-floor'],
+            domOverlay: { root: document.body }
         };
 
         this.session = await navigator.xr.requestSession('immersive-ar', sessionInit);
