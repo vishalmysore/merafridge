@@ -1,6 +1,6 @@
 import './style.css';
 import * as THREE from 'three';
-import { XRManager } from './XRManager.js';
+import { XRManager, getXRCapabilities } from './XRManager.js';
 
 class GrocBotApp {
     constructor() {
@@ -44,19 +44,35 @@ class GrocBotApp {
             this.syncUI();
             this.createFridge();
         }
+
+        // Check XR capabilities with timeout
+        try {
+            const timeoutPromise = new Promise(resolve => 
+                setTimeout(() => resolve({ supported: false, reason: 'Timeout checking WebXR' }), 2000)
+            );
+            const capabilities = await Promise.race([getXRCapabilities(), timeoutPromise]);
+            this.updateXRStatus(capabilities);
+        } catch (error) {
+            this.updateXRStatus({ supported: false, reason: error.message || 'Error checking WebXR' });
+        }
     }
 
     setupUI() {
         const arButton = document.getElementById('ar-button');
-        arButton.onclick = () => this.toggleAR();
-
-        document.querySelectorAll('.step-btn').forEach(btn => {
-            btn.onclick = () => this.updateDimension(btn.dataset.dim, parseInt(btn.dataset.val));
-        });
-
-        document.querySelectorAll('.add-item-btn').forEach(btn => {
-            btn.onclick = () => this.addItem(btn.dataset.type);
-        });
+    updateXRStatus(capabilities) {
+        const statusElement = document.getElementById('xr-status');
+        const arButton = document.getElementById('ar-button');
+        
+        if (capabilities.supported && capabilities.ar) {
+            statusElement.textContent = 'WebXR Ready';
+            statusElement.style.color = '#4ade80';
+            arButton.disabled = false;
+        } else {
+            statusElement.textContent = capabilities.reason || 'WebXR not supported';
+            statusElement.style.color = '#f87171';
+            arButton.disabled = true;
+            arButton.style.opacity = '0.5';
+        }
     }
 
     async toggleAR() {
@@ -65,6 +81,20 @@ class GrocBotApp {
         const uiContainer = document.getElementById('ui-container');
 
         if (!this.isARActive) {
+            try {
+                arButton.textContent = 'Starting...';
+                arButton.disabled = true;
+                await this.xrManager.startARSession();
+                this.isARActive = true;
+                arButton.textContent = 'EXIT AR';
+                arButton.disabled = false;
+                controls.style.display = 'block';
+                this.showMessage('Find a floor and tap to place fridge');
+            } catch (err) {
+                console.error('AR Session Error:', err);
+                this.showMessage('AR start failed: ' + (err.message || 'Permission denied or not supported'));
+                arButton.textContent = 'ENTER AR';
+                arButton.disabled = false
             try {
                 arButton.textContent = 'Starting...';
                 await this.xrManager.startARSession();

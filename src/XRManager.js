@@ -122,4 +122,76 @@ export class XRManager {
         position.setFromMatrixPosition(this.reticle.matrix);
         return position;
     }
+
+    /**
+     * Get XR controller (for button input)
+     */
+    getController(index = 0) {
+        return this.renderer.xr.getController(index);
+    }
+
+    /**
+     * Set up controller event listeners
+     */
+    setupControllerListeners(onSelect) {
+        const controller = this.getController(0);
+        
+        controller.addEventListener('select', () => {
+            if (onSelect) onSelect();
+        });
+        
+        this.scene.add(controller);
+        return controller;
+    }
+
+    /**
+     * Check if we're currently in an AR session
+     */
+    isInARSession() {
+        return this.isSessionActive;
+    }
+
+    /**
+     * Clean up resources
+     */
+    dispose() {
+        if (this.session) {
+            this.endARSession();
+        }
+        
+        if (this.reticle) {
+            this.scene.remove(this.reticle);
+            this.reticle.geometry.dispose();
+            this.reticle.material.dispose();
+        }
+    }
+}
+
+/**
+ * Helper function to check WebXR support with detailed info
+ */
+export async function getXRCapabilities() {
+    if (!('xr' in navigator)) {
+        return {
+            supported: false,
+            reason: 'WebXR not available in this browser'
+        };
+    }
+
+    try {
+        const arSupported = await navigator.xr.isSessionSupported('immersive-ar');
+        const vrSupported = await navigator.xr.isSessionSupported('immersive-vr');
+        
+        return {
+            supported: arSupported || vrSupported,
+            ar: arSupported,
+            vr: vrSupported,
+            reason: null
+        };
+    } catch (error) {
+        return {
+            supported: false,
+            reason: error.message
+        };
+    }
 }
