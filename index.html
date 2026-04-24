@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GrocBot | Grocery Space Preview</title>
+    <meta name="description" content="Check if your groceries fit in your fridge with WebXR AR.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <div id="ui-container">
+            <header>
+                <div class="logo">
+                    <span class="icon">🥗</span>
+                    <h1>GrocBot</h1>
+                </div>
+                <div id="ar-status">Ready</div>
+            </header>
+
+            <main id="main-ui">
+                <section id="onboarding" class="glass-panel">
+                    <h2>Welcome to GrocBot</h2>
+                    <p>Will it fit? Scan your fridge or enter dimensions to find out.</p>
+                    <div class="actions">
+                        <button id="start-scan" class="primary-btn">Scan My Fridge</button>
+                        <button id="manual-setup" class="secondary-btn">Manual Setup</button>
+                    </div>
+                </section>
+
+                <section id="controls" class="glass-panel hidden">
+                    <div class="section-header">
+                        <h3>Your Fridge</h3>
+                        <button id="reset-fridge" class="icon-btn" title="Reset">🔄</button>
+                    </div>
+                    <div id="fridge-stats">
+                        <div class="stat">
+                            <span class="label">Space Used</span>
+                            <div class="progress-bar">
+                                <div id="occupancy-fill" style="width: 0%"></div>
+                            </div>
+                            <span id="occupancy-text">0%</span>
+                        </div>
+                    </div>
+                    
+                    <div id="grocery-list">
+                        <h4>Add Groceries</h4>
+                        <div class="item-grid">
+                            <button class="add-item-btn" data-type="milk" title="Milk Carton">🥛</button>
+                            <button class="add-item-btn" data-type="eggs" title="Egg Box">🥚</button>
+                            <button class="add-item-btn" data-type="yogurt" title="Yogurt">🍦</button>
+                            <button class="add-item-btn" data-type="soda" title="Soda/Wine">🍾</button>
+                            <button class="add-item-btn" data-type="box" title="Leftovers Box">📦</button>
+                        </div>
+                    </div>
+
+                    <div id="current-items"></div>
+                </section>
+            </main>
+
+            <footer>
+                <div id="xr-button-container"></div>
+            </footer>
+        </div>
+
+        <canvas id="three-canvas"></canvas>
+
+        <div id="modal-overlay" class="hidden">
+            <div id="manual-setup-modal" class="glass-panel modal">
+                <h3>Fridge Dimensions (cm)</h3>
+                <div class="input-group">
+                    <label>Width</label>
+                    <input type="number" id="fridge-w" value="60">
+                </div>
+                <div class="input-group">
+                    <label>Height</label>
+                    <input type="number" id="fridge-h" value="120">
+                </div>
+                <div class="input-group">
+                    <label>Depth</label>
+                    <input type="number" id="fridge-d" value="50">
+                </div>
+                <div class="modal-actions">
+                    <button id="save-dimensions" class="primary-btn">Initialize Fridge</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
