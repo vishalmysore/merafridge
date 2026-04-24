@@ -15,6 +15,7 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    user-select: none;
 }
 
 body {
@@ -48,7 +49,7 @@ body {
     width: 100%;
     height: 100%;
     z-index: 10;
-    padding: 20px;
+    padding: 16px;
     display: flex;
     flex-direction: column;
     pointer-events: none;
@@ -62,258 +63,216 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-}
-
-.logo {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    margin-bottom: 24px;
 }
 
 .logo h1 {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     font-weight: 700;
     letter-spacing: -1px;
-}
-
-.logo .icon {
-    font-size: 1.8rem;
+    background: linear-gradient(90deg, #fff, var(--primary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 #ar-status {
     background: var(--panel);
     padding: 4px 12px;
     border-radius: 20px;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: var(--primary);
     border: 1px solid var(--glass-border);
+    backdrop-filter: blur(8px);
 }
 
 main {
     flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    max-width: 400px;
 }
 
 .glass-panel {
     background: var(--panel);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--glass-border);
-    border-radius: 24px;
-    padding: 24px;
+    border-radius: 28px;
+    padding: 20px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-h2 {
-    font-size: 1.8rem;
-    margin-bottom: 12px;
-    line-height: 1.2;
-}
-
-p {
-    color: var(--text-muted);
-    font-size: 1rem;
-    line-height: 1.5;
+/* Dimension Controls */
+.dimension-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
     margin-bottom: 24px;
 }
 
-.primary-btn {
-    background: var(--primary);
-    color: #000;
-    border: none;
-    padding: 14px 28px;
-    border-radius: 14px;
-    font-weight: 600;
-    font-size: 1rem;
-    cursor: pointer;
-    box-shadow: 0 4px 14px var(--primary-glow);
-    transition: transform 0.2s;
-}
-
-.primary-btn:hover {
-    transform: scale(1.02);
-}
-
-.secondary-btn {
-    background: transparent;
-    color: var(--text);
-    border: 1px solid var(--glass-border);
-    padding: 14px 28px;
-    border-radius: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.secondary-btn:hover {
-    background: rgba(255,255,255,0.05);
-}
-
-.actions {
+.dim-group {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-}
-
-.hidden {
-    display: none !important;
-}
-
-#controls {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.section-header {
-    display: flex;
-    justify-content: space-between;
     align-items: center;
-}
-
-#fridge-stats {
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--glass-border);
-}
-
-.stat {
-    display: flex;
-    flex-direction: column;
     gap: 8px;
 }
 
-.label {
-    font-size: 0.85rem;
+.dim-group label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
     color: var(--text-muted);
 }
 
-.progress-bar {
-    width: 100%;
-    height: 8px;
-    background: rgba(255,255,255,0.05);
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-#occupancy-fill {
-    height: 100%;
-    background: var(--primary);
-    border-radius: 4px;
-    transition: width 0.5s ease-out;
-}
-
-#occupancy-text {
-    align-self: flex-end;
-    font-size: 0.8rem;
-    font-weight: 600;
-}
-
-.item-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 10px;
-    margin-top: 10px;
-}
-
-.add-item-btn {
-    aspect-ratio: 1;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid var(--glass-border);
-    border-radius: 12px;
-    font-size: 1.5rem;
+.stepper {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 4px;
+    width: 100%;
+    border: 1px solid var(--glass-border);
+}
+
+.step-btn {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: #fff;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    font-size: 1.2rem;
     cursor: pointer;
     transition: all 0.2s;
 }
 
+.step-btn:active {
+    background: var(--primary);
+    color: #000;
+    transform: scale(0.9);
+}
+
+.stepper span {
+    font-family: 'Outfit';
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+/* Progress Section */
+.progress-container {
+    position: relative;
+    width: 100%;
+    height: 40px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--glass-border);
+    margin-bottom: 24px;
+}
+
+#occupancy-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #606c1e, var(--primary));
+    width: 0%;
+    transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+#occupancy-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-weight: 800;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* Item Grid */
+.item-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+}
+
+.add-item-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 12px 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
 .add-item-btn:hover {
-    background: rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.08);
     border-color: var(--primary);
-    transform: translateY(-2px);
+    transform: translateY(-4px);
+}
+
+.add-item-btn:active {
+    transform: scale(0.95);
+}
+
+.add-item-btn span:first-child {
+    font-size: 1.8rem;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+}
+
+.add-item-btn span:last-child {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text-muted);
 }
 
 #current-items {
-    max-height: 200px;
+    margin-top: 20px;
+    max-height: 120px;
     overflow-y: auto;
-    margin-top: 10px;
 }
 
 .grocery-card {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 8px;
-    background: rgba(255,255,255,0.03);
+    padding: 10px 16px;
+    background: rgba(255,255,255,0.02);
     border-radius: 12px;
     margin-bottom: 8px;
+    border: 1px solid rgba(255,255,255,0.05);
 }
 
-.grocery-card .remove-btn {
+.remove-btn {
     margin-left: auto;
-    background: none;
+    background: rgba(239, 68, 68, 0.1);
     border: none;
     color: var(--error);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
     cursor: pointer;
-    padding: 4px;
 }
 
 footer {
     margin-top: auto;
     display: flex;
     justify-content: center;
-    padding-bottom: 20px;
+    padding-bottom: 12px;
 }
 
-/* Modals */
-#modal-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.6);
-    backdrop-filter: blur(4px);
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
+/* Three.js XR Button Override */
+#ARButton {
+    background: #fff !important;
+    color: #000 !important;
+    border-radius: 100px !important;
+    font-weight: 800 !important;
+    padding: 12px 32px !important;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.4) !important;
+    bottom: 20px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
 }
 
-.modal {
-    width: 100%;
-    max-width: 340px;
-}
-
-.input-group {
-    margin: 16px 0;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.input-group label {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-}
-
-.input-group input {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid var(--glass-border);
-    padding: 12px;
-    border-radius: 10px;
-    color: #fff;
-    font-family: inherit;
-    font-size: 1rem;
-}
-
-.modal-actions {
-    margin-top: 24px;
-}
+.hidden { display: none !important; }
