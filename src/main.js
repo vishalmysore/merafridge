@@ -20,20 +20,18 @@ class GrocBotApp {
         this.xrManager = new XRManager(this.renderer, this.scene, this.camera);
         
         // Better lighting setup for realistic 3D fridge
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
         this.scene.add(ambientLight);
         
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
         directionalLight.position.set(2, 3, 2);
         this.scene.add(directionalLight);
         
-        // Add a second directional light from the side for better depth
-        const sideLight = new THREE.DirectionalLight(0xffffff, 0.4);
+        const sideLight = new THREE.DirectionalLight(0xffffff, 0.5);
         sideLight.position.set(-2, 1, 1);
         this.scene.add(sideLight);
         
-        // Spot light from above for highlights
-        const spotLight = new THREE.SpotLight(0xffffff, 0.5);
+        const spotLight = new THREE.SpotLight(0xffffff, 0.6);
         spotLight.position.set(0, 3, 0);
         spotLight.angle = Math.PI / 4;
         this.scene.add(spotLight);
@@ -54,7 +52,6 @@ class GrocBotApp {
         this.renderer.setAnimationLoop((time, frame) => this.animate(time, frame));
         window.addEventListener('resize', () => this.onResize());
         
-        // Load settings
         const saved = localStorage.getItem('grocbot_fridge');
         if (saved) {
             this.fridgeDimensions = JSON.parse(saved);
@@ -62,7 +59,6 @@ class GrocBotApp {
             this.createFridge();
         }
 
-        // Check XR capabilities with timeout
         try {
             const timeoutPromise = new Promise(resolve => 
                 setTimeout(() => resolve({ supported: false, reason: 'Timeout checking WebXR' }), 2000)
@@ -150,110 +146,249 @@ class GrocBotApp {
         const group = new THREE.Group();
         const mw = w / 100, mh = h / 100, md = d / 100;
 
-        // Main fridge body (stainless steel look)
-        const bodyMat = new THREE.MeshStandardMaterial({ 
-            color: 0xe8e8e8,
-            metalness: 0.7,
-            roughness: 0.3
-        });
-
-        // Fridge body box
-        const bodyGeom = new THREE.BoxGeometry(mw, mh, md);
-        const body = new THREE.Mesh(bodyGeom, bodyMat);
-        group.add(body);
-
-        // Inner black area (slight inset to show depth)
-        const innerMat = new THREE.MeshStandardMaterial({ 
-            color: 0x1a1a1a,
-            metalness: 0.2,
-            roughness: 0.8
-        });
-        const innerGeom = new THREE.BoxGeometry(mw - 0.02, mh - 0.02, md * 0.95);
-        const inner = new THREE.Mesh(innerGeom, innerMat);
-        inner.position.z = -0.01;
-        group.add(inner);
-
-        // Shelves inside
-        const shelfMat = new THREE.MeshStandardMaterial({ 
-            color: 0xcccccc,
-            metalness: 0.3,
-            roughness: 0.6,
+        // Transparent glass walls - super clear like in the image
+        const glassMat = new THREE.MeshPhysicalMaterial({ 
+            color: 0xffffff,
+            metalness: 0.0,
+            roughness: 0.05,
             transparent: true,
-            opacity: 0.8
+            opacity: 0.15,
+            transmission: 0.95,
+            thickness: 0.5,
+            side: THREE.DoubleSide
+        });
+
+        // Create all 6 glass panels
+        const frontGlass = new THREE.Mesh(new THREE.PlaneGeometry(mw, mh), glassMat);
+        frontGlass.position.z = md/2;
+        group.add(frontGlass);
+
+        const backGlass = new THREE.Mesh(new THREE.PlaneGeometry(mw, mh), glassMat);
+        backGlass.position.z = -md/2;
+        group.add(backGlass);
+
+        const leftGlass = new THREE.Mesh(new THREE.PlaneGeometry(md, mh), glassMat);
+        leftGlass.rotation.y = Math.PI/2;
+        leftGlass.position.x = -mw/2;
+        group.add(leftGlass);
+
+        const rightGlass = new THREE.Mesh(new THREE.PlaneGeometry(md, mh), glassMat);
+        rightGlass.rotation.y = -Math.PI/2;
+        rightGlass.position.x = mw/2;
+        group.add(rightGlass);
+
+        const topGlass = new THREE.Mesh(new THREE.PlaneGeometry(mw, md), glassMat);
+        topGlass.rotation.x = Math.PI/2;
+        topGlass.position.y = mh/2;
+        group.add(topGlass);
+
+        const bottomGlass = new THREE.Mesh(new THREE.PlaneGeometry(mw, md), glassMat);
+        bottomGlass.rotation.x = -Math.PI/2;
+        bottomGlass.position.y = -mh/2;
+        group.add(bottomGlass);
+
+        // Chrome/metal frame posts
+        const frameMat = new THREE.MeshStandardMaterial({ 
+            color: 0xc0c0c0,
+            metalness: 0.95,
+            roughness: 0.15
+        });
+
+        const postRadius = 0.008;
+        const postGeom = new THREE.CylinderGeometry(postRadius, postRadius, mh, 8);
+        
+        // Vertical corner posts
+        const corners = [
+            { x: -mw/2, z: -md/2 },
+            { x: mw/2, z: -md/2 },
+            { x: -mw/2, z: md/2 },
+            { x: mw/2, z: md/2 }
+        ];
+
+        corners.forEach(corner => {
+            const post = new THREE.Mesh(postGeom, frameMat);
+            post.position.set(corner.x, 0, corner.z);
+            group.add(post);
+        });
+
+        // Horizontal frame bars
+        const topBarGeom = new THREE.CylinderGeometry(postRadius, postRadius, mw, 8);
+        const sideBarGeom = new THREE.CylinderGeometry(postRadius, postRadius, md, 8);
+
+        // Top frame
+        const topFrontBar = new THREE.Mesh(topBarGeom, frameMat);
+        topFrontBar.rotation.z = Math.PI/2;
+        topFrontBar.position.set(0, mh/2, md/2);
+        group.add(topFrontBar);
+
+        const topBackBar = new THREE.Mesh(topBarGeom, frameMat);
+        topBackBar.rotation.z = Math.PI/2;
+        topBackBar.position.set(0, mh/2, -md/2);
+        group.add(topBackBar);
+
+        const topLeftBar = new THREE.Mesh(sideBarGeom, frameMat);
+        topLeftBar.rotation.x = Math.PI/2;
+        topLeftBar.position.set(-mw/2, mh/2, 0);
+        group.add(topLeftBar);
+
+        const topRightBar = new THREE.Mesh(sideBarGeom, frameMat);
+        topRightBar.rotation.x = Math.PI/2;
+        topRightBar.position.set(mw/2, mh/2, 0);
+        group.add(topRightBar);
+
+        // Bottom frame
+        const bottomFrontBar = new THREE.Mesh(topBarGeom, frameMat);
+        bottomFrontBar.rotation.z = Math.PI/2;
+        bottomFrontBar.position.set(0, -mh/2, md/2);
+        group.add(bottomFrontBar);
+
+        const bottomBackBar = new THREE.Mesh(topBarGeom, frameMat);
+        bottomBackBar.rotation.z = Math.PI/2;
+        bottomBackBar.position.set(0, -mh/2, -md/2);
+        group.add(bottomBackBar);
+
+        const bottomLeftBar = new THREE.Mesh(sideBarGeom, frameMat);
+        bottomLeftBar.rotation.x = Math.PI/2;
+        bottomLeftBar.position.set(-mw/2, -mh/2, 0);
+        group.add(bottomLeftBar);
+
+        const bottomRightBar = new THREE.Mesh(sideBarGeom, frameMat);
+        bottomRightBar.rotation.x = Math.PI/2;
+        bottomRightBar.position.set(mw/2, -mh/2, 0);
+        group.add(bottomRightBar);
+
+        // Clear glass shelves
+        const shelfGlassMat = new THREE.MeshPhysicalMaterial({ 
+            color: 0xffffff,
+            metalness: 0.0,
+            roughness: 0.1,
+            transparent: true,
+            opacity: 0.2,
+            transmission: 0.9,
+            thickness: 0.3
         });
         
         for (let i = 1; i < this.shelvesCount; i++) {
-            const shelfGeom = new THREE.BoxGeometry(mw - 0.04, 0.01, md * 0.9);
-            const shelf = new THREE.Mesh(shelfGeom, shelfMat);
+            const shelfGeom = new THREE.BoxGeometry(mw - 0.02, 0.008, md - 0.02);
+            const shelf = new THREE.Mesh(shelfGeom, shelfGlassMat);
             shelf.position.y = -mh/2 + (i * (mh/this.shelvesCount));
-            shelf.position.z = -0.02;
             group.add(shelf);
+
+            // Shelf support bars
+            const shelfSupportGeom = new THREE.CylinderGeometry(postRadius * 0.5, postRadius * 0.5, mw - 0.02, 6);
+            const frontSupport = new THREE.Mesh(shelfSupportGeom, frameMat);
+            frontSupport.rotation.z = Math.PI/2;
+            frontSupport.position.y = shelf.position.y;
+            frontSupport.position.z = md/2 - 0.01;
+            group.add(frontSupport);
+        }
+
+        group.position.set(0, 0, -1.5);
+        this.scene.add(group);
+        this.fridge = group;
+        this.items = [];
+        this.updateStats();
+    }
+
+    createItemTexture(type) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
         
-        // Create item group for better visuals
+        // Background colors
+        const colors = {
+            milk: { bg: '#ffffff', accent: '#ff0000' },
+            eggs: { bg: '#fffacd', accent: '#8b4513' },
+            yogurt: { bg: '#fff0f5', accent: '#ff69b4' },
+            soda: { bg: '#2ecc71', accent: '#27ae60' },
+            box: { bg: '#d2691e', accent: '#8b4513' }
+        };
+        
+        const color = colors[type] || colors.box;
+        
+        // Fill background
+        ctx.fillStyle = color.bg;
+        ctx.fillRect(0, 0, 256, 256);
+        
+        // Add brand-like elements
+        ctx.fillStyle = color.accent;
+        ctx.font = 'bold 48px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        if (type === 'milk') {
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(0, 80, 256, 96);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText('MILK', 128, 128);
+            ctx.font = '24px Arial';
+            ctx.fillText('Fresh & Pure', 128, 160);
+        } else if (type === 'eggs') {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText('🥚', 128, 80);
+            ctx.fillStyle = '#8b4513';
+            ctx.font = '32px Arial';
+            ctx.fillText('FARM EGGS', 128, 150);
+        } else if (type === 'yogurt') {
+            ctx.fillStyle = '#ff69b4';
+            ctx.font = '40px Arial';
+            ctx.fillText('YOGURT', 128, 128);
+            ctx.font = '20px Arial';
+            ctx.fillText('Strawberry', 128, 170);
+        } else if (type === 'soda') {
+            ctx.fillStyle = '#27ae60';
+            ctx.fillRect(0, 60, 256, 136);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 52px Arial';
+            ctx.fillText('SPRITE', 128, 128);
+        } else if (type === 'box') {
+            // Cardboard texture
+            ctx.fillStyle = '#8b4513';
+            ctx.strokeStyle = '#d4a76a';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(128, 64);
+            ctx.lineTo(192, 128);
+            ctx.lineTo(128, 192);
+            ctx.lineTo(64, 128);
+            ctx.closePath();
+            ctx.stroke();
+            
+            ctx.font = '20px Arial';
+            ctx.fillText('FRAGILE', 128, 128);
+        }
+        
+        return new THREE.CanvasTexture(canvas);
+    }
+
+    addItem(type) {
+        if (!this.fridge) return;
+        const s = this.getItemSpecs(type);
+        
         const itemGroup = new THREE.Group();
         
-        // Main item body with rounded edges
+        // Create texture for the item
+        const texture = this.createItemTexture(type);
+        
+        // Main item body
         const mainGeom = new THREE.BoxGeometry(s.w/100, s.h/100, s.d/100);
         const mainMat = new THREE.MeshStandardMaterial({ 
-            color: s.color,
+            map: texture,
             metalness: s.metalness || 0.1,
             roughness: s.roughness || 0.6
         });
         const mainMesh = new THREE.Mesh(mainGeom, mainMat);
         itemGroup.add(mainMesh);
 
-        // Add label
-                w: 7, h: 22, d: 7, 
-                color: 0xf8f8ff, 
-                metalness: 0.1, 
-                roughness: 0.3,
-                icon: '🥛', 
-                name: 'Milk' 
-            },
-            eggs: { 
-                w: 24, h: 7, d: 11, 
-                color: 0xfffacd, 
-                metalness: 0.0, 
-                roughness: 0.9,
-                icon: '🥚', 
-                name: 'Eggs' 
-            },
-            yogurt: { 
-                w: 10, h: 10, d: 10, 
-                color: 0xfff0f5, 
-                metalness: 0.05, 
-                roughness: 0.7,
-                icon: '🍦', 
-                name: 'Yogurt' 
-            },
-            soda: { 
-                w: 6, h: 23, d: 6, 
-                color: 0x2ecc71, 
-                metalness: 0.2, 
-                roughness: 0.2,
-                icon: '🥤', 
-                name: 'Soda' 
-            },
-            box: { 
-                w: 15, h: 8, d: 15, 
-                color: 0xd2691e, 
-                metalness: 0.0, 
-                roughness: 0.95,
-                icon: '📦', 
-                name: 'Box' 
-           
+        // Add 3D details
+        if (type === 'milk') {
+            const capGeom = new THREE.CylinderGeometry(0.035, 0.035, 0.015, 16);
+            const capMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
             const cap = new THREE.Mesh(capGeom, capMat);
             cap.position.y = (s.h/100)/2 + 0.007;
             itemGroup.add(cap);
-            
-            // Blue label stripe
-            const labelGeom = new THREE.BoxGeometry(s.w/100 + 0.001, s.h/300, s.d/100 + 0.001);
-            const labelMat = new THREE.MeshStandardMaterial({ color: 0x4169e1 });
-            const label = new THREE.Mesh(labelGeom, labelMat);
-            label.position.y = 0;
-            itemGroup.add(label);
         } else if (type === 'eggs') {
-            // Add egg bumps on top
             const eggMat = new THREE.MeshStandardMaterial({ color: 0xfffacd });
             for (let i = 0; i < 6; i++) {
                 const eggGeom = new THREE.SphereGeometry(0.015, 12, 8);
@@ -267,7 +402,6 @@ class GrocBotApp {
                 itemGroup.add(egg);
             }
         } else if (type === 'yogurt') {
-            // Foil lid on top
             const lidGeom = new THREE.CylinderGeometry(s.w/200, s.w/200, 0.002, 16);
             const lidMat = new THREE.MeshStandardMaterial({ 
                 color: 0xc0c0c0,
@@ -278,21 +412,12 @@ class GrocBotApp {
             lid.position.y = (s.h/100)/2 + 0.001;
             itemGroup.add(lid);
         } else if (type === 'soda') {
-            // Bottle cap
             const capGeom = new THREE.CylinderGeometry(0.025, 0.025, 0.02, 16);
             const capMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
             const cap = new THREE.Mesh(capGeom, capMat);
             cap.position.y = (s.h/100)/2 + 0.01;
             itemGroup.add(cap);
-            
-            // Label wrap
-            const labelGeom = new THREE.CylinderGeometry(0.031, 0.031, s.h/300, 16);
-            const labelMat = new THREE.MeshStandardMaterial({ color: 0xff6b6b });
-            const label = new THREE.Mesh(labelGeom, labelMat);
-            label.position.y = 0;
-            itemGroup.add(label);
         } else if (type === 'box') {
-            // Add tape strips
             const tapeGeom = new THREE.BoxGeometry(s.w/100 + 0.002, 0.005, 0.01);
             const tapeMat = new THREE.MeshStandardMaterial({ color: 0xd4a76a });
             const tape1 = new THREE.Mesh(tapeGeom, tapeMat);
@@ -311,73 +436,47 @@ class GrocBotApp {
         itemGroup.rotation.y = Math.random() * Math.PI * 2;
         
         this.fridge.add(itemGroup);
-        this.items.push({ type, mesh: itemGroup
-            side: THREE.DoubleSide
-        });
-        
-        const doorGeom = new THREE.BoxGeometry(mw - 0.04, mh - 0.04, 0.03);
-        const door = new THREE.Mesh(doorGeom, doorMat);
-        door.position.z = (md / 2) + 0.015;
-        group.add(door);
-
-        // Door handle
-        const handleMat = new THREE.MeshStandardMaterial({ 
-            color: 0x404040,
-            metalness: 0.9,
-            roughness: 0.1
-        });
-        
-        const handleGeom = new THREE.CylinderGeometry(0.012, 0.012, mh * 0.6, 16);
-        const handle = new THREE.Mesh(handleGeom, handleMat);
-        handle.position.set(mw * 0.4, 0, (md / 2) + 0.04);
-        group.add(handle);
-
-        // Top handle bar
-        const topHandleGeom = new THREE.BoxGeometry(mw * 0.9, 0.025, 0.025);
-        const topHandle = new THREE.Mesh(topHandleGeom, handleMat);
-        topHandle.position.set(0, mh * 0.45, (md / 2) + 0.04);
-        group.add(topHandle);
-
-        // Bottom grille
-        const grilleGeom = new THREE.BoxGeometry(mw * 0.8, 0.05, 0.02);
-        const grilleMat = new THREE.MeshStandardMaterial({ 
-            color: 0x333333,
-            metalness: 0.5,
-            roughness: 0.7
-        });
-        const grille = new THREE.Mesh(grilleGeom, grilleMat);
-        grille.position.set(0, -mh/2 + 0.05, (md / 2) + 0.015);
-        group.add(grille);
-
-        group.position.set(0, 0, -1.5);
-        this.scene.add(group);
-        this.fridge = group;
-        this.items = [];
-        this.updateStats();
-    }
-
-    addItem(type) {
-        if (!this.fridge) return;
-        const s = this.getItemSpecs(type);
-        const mesh = new THREE.Mesh(
-            new THREE.BoxGeometry(s.w/100, s.h/100, s.d/100),
-            new THREE.MeshStandardMaterial({ color: s.color })
-        );
-        const shelfIdx = Math.floor(Math.random() * this.shelvesCount);
-        const y = -(this.fridgeDimensions.h/200) + (shelfIdx * (this.fridgeDimensions.h/100/this.shelvesCount)) + (s.h/200);
-        mesh.position.set((Math.random()-0.5)*0.2, y, (Math.random()-0.5)*0.2);
-        this.fridge.add(mesh);
-        this.items.push({ type, mesh, id: Date.now() });
+        this.items.push({ type, mesh: itemGroup, id: Date.now() });
         this.updateStats();
     }
 
     getItemSpecs(type) {
         const specs = {
-            milk: { w: 7, h: 22, d: 7, color: 0xffffff, icon: '🥛', name: 'Milk' },
-            eggs: { w: 24, h: 7, d: 11, color: 0xF5DEB3, icon: '🥚', name: 'Eggs' },
-            yogurt: { w: 10, h: 10, d: 10, color: 0xffe4e1, icon: '🍦', name: 'Yogurt' },
-            soda: { w: 6, h: 23, d: 6, color: 0x22c55e, icon: '🍾', name: 'Soda' },
-            box: { w: 15, h: 8, d: 15, color: 0x8b4513, icon: '📦', name: 'Box' }
+            milk: { 
+                w: 7, h: 22, d: 7, 
+                metalness: 0.1, 
+                roughness: 0.3,
+                icon: '🥛', 
+                name: 'Milk' 
+            },
+            eggs: { 
+                w: 24, h: 7, d: 11, 
+                metalness: 0.0, 
+                roughness: 0.9,
+                icon: '🥚', 
+                name: 'Eggs' 
+            },
+            yogurt: { 
+                w: 10, h: 10, d: 10, 
+                metalness: 0.05, 
+                roughness: 0.7,
+                icon: '🍦', 
+                name: 'Yogurt' 
+            },
+            soda: { 
+                w: 6, h: 23, d: 6, 
+                metalness: 0.2, 
+                roughness: 0.2,
+                icon: '🥤', 
+                name: 'Soda' 
+            },
+            box: { 
+                w: 15, h: 8, d: 15, 
+                metalness: 0.0, 
+                roughness: 0.95,
+                icon: '📦', 
+                name: 'Box' 
+            }
         };
         return specs[type];
     }
@@ -402,7 +501,7 @@ class GrocBotApp {
             const pose = this.xrManager.updateHitTest(frame);
             if (pose && this.fridge) {
                 this.fridge.position.setFromMatrixPosition(this.xrManager.reticle.matrix);
-                this.fridge.position.y += (this.fridgeDimensions.h / 200); // Sit on surface
+                this.fridge.position.y += (this.fridgeDimensions.h / 200);
             }
         } else if (!this.isARActive) {
             if (this.fridge) this.fridge.rotation.y += 0.01;
