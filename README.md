@@ -34,9 +34,9 @@ MeraFridge is a WebXR-powered application built with **Vite** and **Three.js**. 
 - **Item Details**: Each item shows calories and macros when added
 - **AR Placement**: Place and visualize your fridge in real-world space using WebXR
 
-## 📦 Deployment to GitHub Pages
+## 📦 Fork and Deployment to GitHub Pages
 
-MeraFridge is configured with **GitHub Actions** for automated deployment. 
+MeraFridge is configured with **GitHub Actions** for automated deployment. Clone the code and fork it in your local repo
 
 1. **Push to main**: Simply push your code to the `main` branch.
    ```bash
