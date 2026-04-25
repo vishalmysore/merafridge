@@ -57,6 +57,52 @@ main { flex-grow: 1; display: flex; align-items: flex-end; }
     padding: 20px;
     width: 100%;
     margin-bottom: 20px;
+    max-height: 60vh;
+    overflow: hidden;
+}
+
+.compact-panel {
+    padding: 10px 15px;
+    position: relative;
+}
+
+.toggle-panel-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    z-index: 10;
+    transition: transform 0.3s;
+}
+
+.toggle-panel-btn.collapsed {
+    transform: rotate(180deg);
+}
+
+#panel-content {
+    max-height: 50vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+#panel-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+#panel-content::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+#panel-content::-webkit-scrollbar-thumb {
+    background: rgba(205, 236, 75, 0.3);
+    border-radius: 2px;
 }
 
 .dimension-controls {
@@ -99,7 +145,47 @@ main { flex-grow: 1; display: flex; align-items: flex-end; }
 
 .add-item-btn span { margin-top: 5px; font-size: 1.5rem; }
 
-footer { display: flex; justify-content: center; }
+footer { display: flex; flex-direction: column; justify-content: center; align-items: center; }
+
+#bottom-nav {
+    width: 100%;
+    max-width: 500px;
+}
+
+.nav-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    padding: 10px 15px;
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    min-width: 90px;
+    transition: all 0.2s;
+}
+
+.nav-btn span:first-child {
+    font-size: 20px;
+}
+
+.nav-btn.active {
+    background: var(--primary);
+    color: #000;
+    border-color: var(--primary);
+}
+
+.nav-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.nav-btn.active:hover {
+    background: var(--primary);
+}
 
 #ar-button {
     background: #fff; color: #000; border: none;
@@ -114,3 +200,72 @@ footer { display: flex; justify-content: center; }
 }
 
 .hidden { display: none !important; }
+
+.nutrition-panel {
+    margin-top: 15px;
+    margin-bottom: 10px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nutrition-panel h3 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    color: #cdec4b;
+    text-align: center;
+}
+
+.nutrition-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.nutrition-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+.nutrition-label {
+    font-size: 10px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 3px;
+}
+
+.nutrition-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+}
+
+#current-items {
+    margin-top: 10px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+#current-items::-webkit-scrollbar {
+    width: 6px;
+}
+
+#current-items::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}
+
+#current-items::-webkit-scrollbar-thumb {
+    background: rgba(205, 236, 75, 0.3);
+    border-radius: 3px;
+}
+
+#current-items::-webkit-scrollbar-thumb:hover {
+    background: rgba(205, 236, 75, 0.5);
+}

@@ -81,6 +81,52 @@ class GrocBotApp {
         document.querySelectorAll('.add-item-btn').forEach(btn => {
             btn.onclick = () => this.addItem(btn.dataset.type);
         });
+
+        // Toggle panel collapse
+        const toggleBtn = document.getElementById('toggle-panel');
+        const panelContent = document.getElementById('panel-content');
+        if (toggleBtn && panelContent) {
+            toggleBtn.onclick = () => {
+                const isCollapsed = panelContent.style.display === 'none';
+                panelContent.style.display = isCollapsed ? 'block' : 'none';
+                toggleBtn.classList.toggle('collapsed', !isCollapsed);
+            };
+        }
+
+        // Bottom navigation
+        const navAddItem = document.getElementById('nav-add-item');
+        const navOrganize = document.getElementById('nav-organize');
+        const navShopping = document.getElementById('nav-shopping');
+        const groceryList = document.getElementById('grocery-list');
+        const currentItems = document.getElementById('current-items');
+
+        if (navAddItem) {
+            navAddItem.onclick = () => {
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                navAddItem.classList.add('active');
+                groceryList.style.display = 'block';
+                currentItems.style.display = 'none';
+            };
+        }
+
+        if (navOrganize) {
+            navOrganize.onclick = () => {
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                navOrganize.classList.add('active');
+                groceryList.style.display = 'none';
+                currentItems.style.display = 'block';
+            };
+        }
+
+        if (navShopping) {
+            navShopping.onclick = () => {
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                navShopping.classList.add('active');
+                groceryList.style.display = 'none';
+                currentItems.style.display = 'none';
+                this.showMessage('Shopping list feature coming soon!');
+            };
+        }
     }
 
     updateXRStatus(capabilities) {
@@ -102,6 +148,7 @@ class GrocBotApp {
     async toggleAR() {
         const arButton = document.getElementById('ar-button');
         const controls = document.getElementById('controls');
+        const bottomNav = document.getElementById('bottom-nav');
 
         if (!this.isARActive) {
             try {
@@ -112,6 +159,7 @@ class GrocBotApp {
                 arButton.textContent = 'EXIT AR';
                 arButton.disabled = false;
                 controls.style.display = 'block';
+                bottomNav.style.display = 'block';
                 this.showMessage('Find a floor and tap to place fridge');
             } catch (err) {
                 console.error('AR Session Error:', err);
@@ -124,6 +172,7 @@ class GrocBotApp {
             this.isARActive = false;
             arButton.textContent = 'ENTER AR';
             controls.style.display = 'none';
+            bottomNav.style.display = 'none';
         }
     }
 
@@ -447,35 +496,65 @@ class GrocBotApp {
                 metalness: 0.1, 
                 roughness: 0.3,
                 icon: '🥛', 
-                name: 'Milk' 
+                name: 'Milk',
+                calories: 150,
+                protein: 8,
+                carbs: 12,
+                fats: 8,
+                healthy: true,
+                emoji: '😊'
             },
             eggs: { 
                 w: 24, h: 7, d: 11, 
                 metalness: 0.0, 
                 roughness: 0.9,
                 icon: '🥚', 
-                name: 'Eggs' 
+                name: 'Eggs',
+                calories: 210,
+                protein: 18,
+                carbs: 2,
+                fats: 15,
+                healthy: true,
+                emoji: '😊'
             },
             yogurt: { 
                 w: 10, h: 10, d: 10, 
                 metalness: 0.05, 
                 roughness: 0.7,
                 icon: '🍦', 
-                name: 'Yogurt' 
+                name: 'Yogurt',
+                calories: 120,
+                protein: 6,
+                carbs: 18,
+                fats: 2,
+                healthy: true,
+                emoji: '😊'
             },
             soda: { 
                 w: 6, h: 23, d: 6, 
                 metalness: 0.2, 
                 roughness: 0.2,
                 icon: '🥤', 
-                name: 'Soda' 
+                name: 'Soda',
+                calories: 140,
+                protein: 0,
+                carbs: 39,
+                fats: 0,
+                healthy: false,
+                emoji: '😕'
             },
             box: { 
                 w: 15, h: 8, d: 15, 
                 metalness: 0.0, 
                 roughness: 0.95,
                 icon: '📦', 
-                name: 'Box' 
+                name: 'Box',
+                calories: 0,
+                protein: 0,
+                carbs: 0,
+                fats: 0,
+                healthy: true,
+                emoji: '📦'
             }
         };
         return specs[type];
@@ -484,10 +563,105 @@ class GrocBotApp {
     updateStats() {
         const vol = this.fridgeDimensions.w * this.fridgeDimensions.h * this.fridgeDimensions.d;
         let iv = 0;
-        this.items.forEach(i => { const s = this.getItemSpecs(i.type); iv += (s.w*s.h*s.d); });
+        let totalCalories = 0;
+        let totalProtein = 0;
+        let totalCarbs = 0;
+        let totalFats = 0;
+        let healthyCount = 0;
+        let unhealthyCount = 0;
+
+        this.items.forEach(i => { 
+            const s = this.getItemSpecs(i.type); 
+            iv += (s.w*s.h*s.d);
+            totalCalories += s.calories;
+            totalProtein += s.protein;
+            totalCarbs += s.carbs;
+            totalFats += s.fats;
+            
+            if (s.healthy) {
+                healthyCount++;
+            } else if (i.type !== 'box') {
+                unhealthyCount++;
+            }
+        });
+
         const p = Math.min(Math.round((iv/vol)*100), 100);
         document.getElementById('occupancy-fill').style.width = p + '%';
         document.getElementById('occupancy-text').textContent = p + '% FULL';
+
+        // Update nutrition totals
+        document.getElementById('total-calories').textContent = totalCalories + ' kcal';
+        document.getElementById('total-protein').textContent = totalProtein + 'g';
+        document.getElementById('total-carbs').textContent = totalCarbs + 'g';
+        document.getElementById('total-fats').textContent = totalFats + 'g';
+
+        // Update overall health indicator
+        this.updateOverallHealth(healthyCount, unhealthyCount);
+
+        // Update current items list
+        this.updateCurrentItemsList();
+    }
+
+    updateOverallHealth(healthyCount, unhealthyCount) {
+        const emojiElement = document.getElementById('overall-health-emoji');
+        const textElement = document.getElementById('overall-health-text');
+        
+        if (this.items.length === 0) {
+            emojiElement.textContent = '😊';
+            textElement.textContent = 'Add items to see health status';
+            textElement.style.color = '#888';
+            return;
+        }
+
+        const healthRatio = healthyCount / (healthyCount + unhealthyCount);
+        
+        if (healthRatio >= 0.8) {
+            emojiElement.textContent = '😊';
+            textElement.textContent = 'Excellent! Very nutritious selection';
+            textElement.style.color = '#4ade80';
+        } else if (healthRatio >= 0.6) {
+            emojiElement.textContent = '🙂';
+            textElement.textContent = 'Good! Mostly healthy choices';
+            textElement.style.color = '#a3e635';
+        } else if (healthRatio >= 0.4) {
+            emojiElement.textContent = '😐';
+            textElement.textContent = 'Okay - Mix of healthy and unhealthy';
+            textElement.style.color = '#fbbf24';
+        } else if (healthRatio >= 0.2) {
+            emojiElement.textContent = '😕';
+            textElement.textContent = 'Not great - More unhealthy items';
+            textElement.style.color = '#fb923c';
+        } else {
+            emojiElement.textContent = '😞';
+            textElement.textContent = 'Poor - Mostly unhealthy choices';
+            textElement.style.color = '#f87171';
+        }
+    }
+
+    updateCurrentItemsList() {
+        const container = document.getElementById('current-items');
+        if (!container) return;
+
+        container.innerHTML = '<h4 style="margin: 10px 0; font-size: 14px; color: #888;">Items in Fridge:</h4>';
+        
+        this.items.forEach((item, index) => {
+            const spec = this.getItemSpecs(item.type);
+            const itemDiv = document.createElement('div');
+            itemDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(255,255,255,0.05); margin: 5px 0; border-radius: 8px; font-size: 12px;';
+            
+            itemDiv.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 20px;">${spec.icon}</span>
+                    <span style="font-weight: 500;">${spec.name}</span>
+                </div>
+                <div style="text-align: right; font-size: 11px; color: #888;">
+                    <div>${spec.calories} kcal</div>
+                    <div>P:${spec.protein}g C:${spec.carbs}g F:${spec.fats}g</div>
+                </div>
+            `;
+            
+            container.appendChild(itemDiv);
+        });
     }
 
     showMessage(txt) {

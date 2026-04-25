@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>GrocBot | Grocery Space Preview</title>
-    <meta name="description" content="Check if your groceries fit in your fridge with WebXR AR.">
+    <title>MeraFridge | Smart Nutrition Tracking</title>
+    <meta name="description" content="Track your fridge space and nutrition with WebXR AR.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -17,62 +17,107 @@
     <div id="ui-container">
         <header>
             <div class="logo">
-                <h1>GrocBot 🥗</h1>
+                <h1>MeraFridge 🍎</h1>
             </div>
             <div id="xr-status">WebXR Ready</div>
         </header>
 
         <!-- AR Dashboard (Hidden until AR starts) -->
         <main id="main-ui">
-            <section id="controls" class="glass-panel" style="display: none;">
-                <div class="dimension-controls">
-                    <div class="dim-group">
-                        <label>W</label>
-                        <div class="stepper">
-                            <button class="step-btn" data-dim="w" data-val="-5">-</button>
-                            <span id="val-w">60</span>
-                            <button class="step-btn" data-dim="w" data-val="5">+</button>
-                        </div>
-                    </div>
-                    <div class="dim-group">
-                        <label>H</label>
-                        <div class="stepper">
-                            <button class="step-btn" data-dim="h" data-val="-10">-</button>
-                            <span id="val-h">120</span>
-                            <button class="step-btn" data-dim="h" data-val="10">+</button>
-                        </div>
-                    </div>
-                    <div class="dim-group">
-                        <label>D</label>
-                        <div class="stepper">
-                            <button class="step-btn" data-dim="d" data-val="-5">-</button>
-                            <span id="val-d">50</span>
-                            <button class="step-btn" data-dim="d" data-val="5">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="fridge-stats">
-                    <div class="progress-container">
-                        <div id="occupancy-fill" style="width: 0%"></div>
-                        <span id="occupancy-text">0% FULL</span>
-                    </div>
-                </div>
+            <section id="controls" class="glass-panel compact-panel" style="display: none;">
+                <button id="toggle-panel" class="toggle-panel-btn">▼</button>
                 
-                <div id="grocery-list">
-                    <div class="item-grid">
-                        <button class="add-item-btn" data-type="milk">🥛<span>Milk</span></button>
-                        <button class="add-item-btn" data-type="eggs">🥚<span>Eggs</span></button>
-                        <button class="add-item-btn" data-type="yogurt">🍦<span>Yogurt</span></button>
-                        <button class="add-item-btn" data-type="soda">🥤<span>Soda</span></button>
-                        <button class="add-item-btn" data-type="box">📦<span>Box</span></button>
+                <div id="panel-content">
+                    <div class="dimension-controls">
+                        <div class="dim-group">
+                            <label>W</label>
+                            <div class="stepper">
+                                <button class="step-btn" data-dim="w" data-val="-5">-</button>
+                                <span id="val-w">60</span>
+                                <button class="step-btn" data-dim="w" data-val="5">+</button>
+                            </div>
+                        </div>
+                        <div class="dim-group">
+                            <label>H</label>
+                            <div class="stepper">
+                                <button class="step-btn" data-dim="h" data-val="-10">-</button>
+                                <span id="val-h">120</span>
+                                <button class="step-btn" data-dim="h" data-val="10">+</button>
+                            </div>
+                        </div>
+                        <div class="dim-group">
+                            <label>D</label>
+                            <div class="stepper">
+                                <button class="step-btn" data-dim="d" data-val="-5">-</button>
+                                <span id="val-d">50</span>
+                                <button class="step-btn" data-dim="d" data-val="5">+</button>
+                            </div>
+                        </div>
                     </div>
+
+                    <div id="fridge-stats">
+                        <div class="progress-container">
+                            <div id="occupancy-fill" style="width: 0%"></div>
+                            <span id="occupancy-text">0% FULL</span>
+                        </div>
+                    </div>
+
+                    <div id="nutrition-panel" class="nutrition-panel">
+                        <div style="text-align: center; margin-bottom: 10px;">
+                            <div id="overall-health-emoji" style="font-size: 36px; margin-bottom: 3px;">😊</div>
+                            <div id="overall-health-text" style="font-size: 10px; color: #888;">Overall Health Status</div>
+                        </div>
+                        <div class="nutrition-grid">
+                            <div class="nutrition-item">
+                                <span class="nutrition-label">Calories</span>
+                                <span id="total-calories" class="nutrition-value">0 kcal</span>
+                            </div>
+                            <div class="nutrition-item">
+                                <span class="nutrition-label">Protein</span>
+                                <span id="total-protein" class="nutrition-value">0g</span>
+                            </div>
+                            <div class="nutrition-item">
+                                <span class="nutrition-label">Carbs</span>
+                                <span id="total-carbs" class="nutrition-value">0g</span>
+                            </div>
+                            <div class="nutrition-item">
+                                <span class="nutrition-label">Fats</span>
+                                <span id="total-fats" class="nutrition-value">0g</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="grocery-list" style="display: none;">
+                        <div class="item-grid">
+                            <button class="add-item-btn" data-type="milk" title="150 kcal - Healthy 😊">🥛<span>Milk</span></button>
+                            <button class="add-item-btn" data-type="eggs" title="210 kcal - Healthy 😊">🥚<span>Eggs</span></button>
+                            <button class="add-item-btn" data-type="yogurt" title="120 kcal - Healthy 😊">🍦<span>Yogurt</span></button>
+                            <button class="add-item-btn" data-type="soda" title="140 kcal - Not Nutritious 😕">🥤<span>Soda</span></button>
+                            <button class="add-item-btn" data-type="box" title="Storage Box">📦<span>Box</span></button>
+                        </div>
+                    </div>
+                    <div id="current-items" style="display: none;"></div>
                 </div>
-                <div id="current-items"></div>
             </section>
         </main>
 
         <footer>
+            <div id="bottom-nav" style="display: none; width: 100%; margin-bottom: 10px;">
+                <div style="display: flex; justify-content: center; gap: 10px;">
+                    <button id="nav-add-item" class="nav-btn active">
+                        <span>➕</span>
+                        <span>ADD ITEM</span>
+                    </button>
+                    <button id="nav-organize" class="nav-btn">
+                        <span>📋</span>
+                        <span>ORGANIZE</span>
+                    </button>
+                    <button id="nav-shopping" class="nav-btn">
+                        <span>🛒</span>
+                        <span>SHOPPING LIST</span>
+                    </button>
+                </div>
+            </div>
             <button id="ar-button" class="primary-btn">
                 <span>🥽</span> ENTER AR
             </button>
