@@ -1,8 +1,9 @@
 // llm.js — WebLLM vision client for GrocBot food scanning
 
 export const VISION_MODELS = [
-  { id: 'Phi-3-vision-128k-instruct-q4f16_1-MLC',    name: 'Phi-3 Vision (~2.4 GB) — recommended' },
-  { id: 'Phi-3.5-vision-instruct-q4f16_1-MLC',       name: 'Phi-3.5 Vision (~2.4 GB) — latest' },
+  { id: 'SmolVLM-256M-Instruct-q4f16_1-MLC',         name: 'SmolVLM 256M  (~300 MB) — fastest, lightest' },
+  { id: 'Qwen2-VL-2B-Instruct-q4f16_1-MLC',          name: 'Qwen2-VL 2B   (~1.5 GB) — balanced' },
+  { id: 'Phi-3.5-vision-instruct-q4f16_1-MLC',       name: 'Phi-3.5 Vision (~2.4 GB) — best quality' },
 ]
 
 let _worker     = null
