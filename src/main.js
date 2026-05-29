@@ -1,6 +1,7 @@
 import './style.css';
 import * as THREE from 'three';
 import { XRManager, getXRCapabilities } from './XRManager.js';
+import { VISION_MODELS, loadModel, getModelStatus, analyzeImage, cancelLoad } from './llm.js';
 
 class GrocBotApp {
     constructor() {
@@ -41,12 +42,15 @@ class GrocBotApp {
         this.fridgeDimensions = { w: 60, h: 120, d: 50 };
         this.shelvesCount = 4;
         this.isARActive = false;
+        this.cameraStream = null;
+        this.llmReady = false;
 
         this.init();
     }
 
     async init() {
         this.setupUI();
+        this.setupLLM();
         this.createFridge();
         
         this.renderer.setAnimationLoop((time, frame) => this.animate(time, frame));
@@ -127,6 +131,168 @@ class GrocBotApp {
                 this.showMessage('Shopping list feature coming soon!');
             };
         }
+
+        const navScan = document.getElementById('nav-scan');
+        if (navScan) {
+            navScan.onclick = () => this.openCameraModal();
+        }
+    }
+
+    setupLLM() {
+        const modelSelect  = document.getElementById('llm-model-select');
+        const loadBtn      = document.getElementById('llm-load-btn');
+        const statusEl     = document.getElementById('llm-status');
+
+        if (!modelSelect || !loadBtn || !statusEl) return;
+
+        VISION_MODELS.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.id;
+            opt.textContent = m.name;
+            modelSelect.appendChild(opt);
+        });
+
+        const saved = localStorage.getItem('grocbot_llm_model');
+        if (saved) modelSelect.value = saved;
+
+        loadBtn.onclick = async () => {
+            const modelId = modelSelect.value;
+            if (!modelId) return;
+
+            localStorage.setItem('grocbot_llm_model', modelId);
+            loadBtn.disabled    = true;
+            statusEl.textContent = 'Initializing WebGPU…';
+            statusEl.style.color = '#fbbf24';
+
+            try {
+                await loadModel(modelId, (evt) => {
+                    if (evt.type === 'device')      statusEl.textContent = '⬇ Downloading model…';
+                    else if (evt.type === 'phase' && evt.phase === 'compile') statusEl.textContent = '⚙ Compiling shaders…';
+                    else if (evt.type === 'downloading') statusEl.textContent = `⬇ ${evt.progress}%`;
+                    else if (evt.type === 'ready')  {
+                        statusEl.textContent = '✅ Model ready';
+                        statusEl.style.color = '#4ade80';
+                    } else if (evt.type === 'error') {
+                        statusEl.textContent = '❌ ' + evt.error;
+                        statusEl.style.color = '#f87171';
+                    }
+                });
+                this.llmReady = true;
+                loadBtn.textContent = 'Reload';
+            } catch (err) {
+                statusEl.textContent = '❌ ' + (err.message || 'Load failed');
+                statusEl.style.color = '#f87171';
+            } finally {
+                loadBtn.disabled = false;
+            }
+        };
+    }
+
+    openCameraModal() {
+        const modal = document.getElementById('camera-modal');
+        if (!modal) return;
+
+        if (!this.llmReady) {
+            this.showMessage('Load a vision model first (AI Scan panel)');
+            return;
+        }
+
+        modal.style.display = 'flex';
+        const video = document.getElementById('camera-video');
+
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+            .then(stream => {
+                this.cameraStream = stream;
+                video.srcObject = stream;
+                video.play();
+            })
+            .catch(err => {
+                this.closeCameraModal();
+                this.showMessage('Camera access denied: ' + err.message);
+            });
+    }
+
+    closeCameraModal() {
+        const modal = document.getElementById('camera-modal');
+        if (modal) modal.style.display = 'none';
+        if (this.cameraStream) {
+            this.cameraStream.getTracks().forEach(t => t.stop());
+            this.cameraStream = null;
+        }
+    }
+
+    async captureAndAnalyze() {
+        const video   = document.getElementById('camera-video');
+        const canvas  = document.createElement('canvas');
+        canvas.width  = video.videoWidth  || 640;
+        canvas.height = video.videoHeight || 480;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+
+        this.closeCameraModal();
+        this.showMessage('🔍 Analyzing food…');
+
+        try {
+            const result = await analyzeImage(dataUrl);
+            if (!result || result.name === 'unknown') {
+                this.showMessage('Could not identify food. Try again.');
+                return;
+            }
+            this.addScannedItem(result);
+            this.showMessage(`Added: ${result.emoji} ${result.name} (${result.calories} kcal)`);
+        } catch (err) {
+            this.showMessage('Analysis failed: ' + err.message);
+        }
+    }
+
+    addScannedItem(result) {
+        if (!this.fridge) return;
+
+        const spec = {
+            w: 10, h: 15, d: 10,
+            metalness: 0.1,
+            roughness: 0.6,
+            icon: result.emoji || '🍽',
+            name: result.name,
+            calories: Math.round(result.calories || 0),
+            protein:  Math.round(result.protein  || 0),
+            carbs:    Math.round(result.carbs     || 0),
+            fats:     Math.round(result.fats      || 0),
+            healthy:  result.healthy ?? true,
+            emoji:    result.healthy ? '😊' : '😕',
+        };
+
+        const itemGroup = new THREE.Group();
+        const canvas    = document.createElement('canvas');
+        canvas.width    = 256;
+        canvas.height   = 256;
+        const ctx       = canvas.getContext('2d');
+        ctx.fillStyle   = result.healthy ? '#2d6a4f' : '#7d2935';
+        ctx.fillRect(0, 0, 256, 256);
+        ctx.font        = '80px serif';
+        ctx.textAlign   = 'center';
+        ctx.fillText(spec.icon, 128, 130);
+        ctx.fillStyle   = '#fff';
+        ctx.font        = 'bold 22px Arial';
+        ctx.fillText(spec.name.slice(0, 14), 128, 200);
+        ctx.font        = '16px Arial';
+        ctx.fillText(spec.calories + ' kcal', 128, 230);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        const mesh    = new THREE.Mesh(
+            new THREE.BoxGeometry(spec.w / 100, spec.h / 100, spec.d / 100),
+            new THREE.MeshStandardMaterial({ map: texture, metalness: spec.metalness, roughness: spec.roughness })
+        );
+        itemGroup.add(mesh);
+
+        const shelfIdx = Math.floor(Math.random() * this.shelvesCount);
+        const y = -(this.fridgeDimensions.h / 200) + (shelfIdx * (this.fridgeDimensions.h / 100 / this.shelvesCount)) + (spec.h / 200) + 0.01;
+        itemGroup.position.set((Math.random() - 0.5) * 0.2, y, (Math.random() - 0.5) * 0.2);
+        itemGroup.rotation.y = Math.random() * Math.PI * 2;
+
+        this.fridge.add(itemGroup);
+        this.items.push({ type: 'scanned', spec, mesh: itemGroup, id: Date.now() });
+        this.updateStats();
     }
 
     updateXRStatus(capabilities) {
@@ -570,8 +736,8 @@ class GrocBotApp {
         let healthyCount = 0;
         let unhealthyCount = 0;
 
-        this.items.forEach(i => { 
-            const s = this.getItemSpecs(i.type); 
+        this.items.forEach(i => {
+            const s = i.spec ?? this.getItemSpecs(i.type);
             iv += (s.w*s.h*s.d);
             totalCalories += s.calories;
             totalProtein += s.protein;
@@ -583,6 +749,7 @@ class GrocBotApp {
             } else if (i.type !== 'box') {
                 unhealthyCount++;
             }
+
         });
 
         const p = Math.min(Math.round((iv/vol)*100), 100);
@@ -645,7 +812,7 @@ class GrocBotApp {
         container.innerHTML = '<h4 style="margin: 10px 0; font-size: 14px; color: #888;">Items in Fridge:</h4>';
         
         this.items.forEach((item, index) => {
-            const spec = this.getItemSpecs(item.type);
+            const spec = item.spec ?? this.getItemSpecs(item.type);
             const itemDiv = document.createElement('div');
             itemDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(255,255,255,0.05); margin: 5px 0; border-radius: 8px; font-size: 12px;';
             
@@ -690,4 +857,4 @@ class GrocBotApp {
     }
 }
 
-window.onload = () => new GrocBotApp();
+window.onload = () => { window._grocApp = new GrocBotApp(); };

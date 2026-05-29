@@ -87,6 +87,16 @@
                         </div>
                     </div>
                     
+                    <!-- AI Scan Panel -->
+                    <div id="llm-panel" style="margin-bottom: 10px; padding: 10px; background: rgba(99,102,241,0.15); border-radius: 10px; border: 1px solid rgba(99,102,241,0.3);">
+                        <div style="font-size: 11px; color: #a5b4fc; margin-bottom: 8px; font-weight: 600; letter-spacing: 0.5px;">🤖 AI FOOD SCANNER (WebLLM)</div>
+                        <select id="llm-model-select" style="width:100%; margin-bottom:6px; padding:5px; background:rgba(0,0,0,0.4); color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:6px; font-size:11px;">
+                            <option value="">— select vision model —</option>
+                        </select>
+                        <button id="llm-load-btn" style="width:100%; padding:6px; background:rgba(99,102,241,0.5); color:#fff; border:none; border-radius:6px; font-size:12px; cursor:pointer; margin-bottom:6px;">Load Model</button>
+                        <div id="llm-status" style="font-size:11px; color:#888; text-align:center;">Model not loaded</div>
+                    </div>
+
                     <div id="grocery-list" style="display: none;">
                         <div class="item-grid">
                             <button class="add-item-btn" data-type="milk" title="150 kcal - Healthy 😊">🥛<span>Milk</span></button>
@@ -116,12 +126,26 @@
                         <span>🛒</span>
                         <span>SHOPPING LIST</span>
                     </button>
+                    <button id="nav-scan" class="nav-btn">
+                        <span>📷</span>
+                        <span>SCAN FOOD</span>
+                    </button>
                 </div>
             </div>
             <button id="ar-button" class="primary-btn">
                 <span>🥽</span> ENTER AR
             </button>
         </footer>
+    </div>
+
+    <!-- Camera Modal -->
+    <div id="camera-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:1000; flex-direction:column; align-items:center; justify-content:center; gap:16px;">
+        <div style="color:#fff; font-size:14px; font-weight:600;">📷 Point at food to scan</div>
+        <video id="camera-video" autoplay playsinline style="max-width:90vw; max-height:55vh; border-radius:12px; border:2px solid rgba(99,102,241,0.6);"></video>
+        <div style="display:flex; gap:12px;">
+            <button onclick="window._grocApp.captureAndAnalyze()" style="padding:12px 28px; background:#6366f1; color:#fff; border:none; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer;">✅ Capture & Analyze</button>
+            <button onclick="window._grocApp.closeCameraModal()" style="padding:12px 20px; background:rgba(255,255,255,0.1); color:#fff; border:none; border-radius:10px; font-size:15px; cursor:pointer;">✕ Cancel</button>
+        </div>
     </div>
 
     <!-- Message Overlay -->
